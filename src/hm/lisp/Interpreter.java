@@ -7,7 +7,7 @@ import static java.lang.Character.isDigit;
 public class Interpreter {
     private Map<Object, Object> globalMemory = new HashMap<>();
 
-    private static class StackFrame {
+    private static class Level {
         private boolean readingList;
         private List<Object> list = new ArrayList();
 
@@ -21,92 +21,96 @@ public class Interpreter {
         private String string = "";
     }
 
-    private Stack<StackFrame> stack = new Stack<>();
+    private Stack<Level> levels = new Stack<>();
 
-
-    private StackFrame currentFrame = new StackFrame();
+    private Level currentLevel = new Level();
 
     public void evaluate(String code) {
         for (int index = 0; index < code.length(); index++) {
             char c = code.charAt(index);
             if (c == '\n') {
             } else if (c == '(') {
-                if (currentFrame.readingList) {
-                    stack.push(currentFrame);
-                    currentFrame = new StackFrame();
-                    currentFrame.readingList = true;
+                if (currentLevel.readingList) {
+                    levels.push(currentLevel);
+                    currentLevel = new Level();
+                    currentLevel.readingList = true;
                 } else {
-                    currentFrame.readingList = true;
+                    currentLevel.readingList = true;
                 }
             } else if (c == ')') {
-                if (currentFrame.readingNumber) {
-                    currentFrame.readingNumber = false;
-                    currentFrame.list.add(Double.parseDouble(currentFrame.number));
+                if (currentLevel.readingNumber) {
+                    currentLevel.readingNumber = false;
+                    currentLevel.list.add(Double.parseDouble(currentLevel.number));
                 }
-                if (currentFrame.readingSymbol) {
-                    currentFrame.readingSymbol = false;
-                    currentFrame.list.add(currentFrame.symbol.trim());
+                if (currentLevel.readingSymbol) {
+                    currentLevel.readingSymbol = false;
+                    currentLevel.list.add(currentLevel.symbol.trim());
                 }
-                currentFrame.readingList = false;
+                currentLevel.readingList = false;
 
-                if (!stack.empty()) {
-                    StackFrame previousFrame = stack.pop();
-                    previousFrame.list.add(currentFrame.list);
-                    currentFrame = previousFrame;
+                if (!levels.empty()) {
+                    Level previousFrame = levels.pop();
+                    previousFrame.list.add(currentLevel.list);
+                    currentLevel = previousFrame;
                 } else {
-                    execute(currentFrame.list, globalMemory);
-                    currentFrame.list.clear();
+                    execute(new ArrayList<>(), currentLevel.list, globalMemory);
+                    currentLevel.list.clear();
                 }
             } else if (c == '"') {
-                if (currentFrame.readingString) {
-                    currentFrame.list.add(currentFrame.string);
-                    currentFrame.readingString = false;
+                if (currentLevel.readingString) {
+                    currentLevel.list.add(currentLevel.string);
+                    currentLevel.readingString = false;
                 } else {
-                    currentFrame.readingString = true;
+                    currentLevel.readingString = true;
                 }
-            } else if (currentFrame.readingList) {
-                if (currentFrame.readingString) {
-                    currentFrame.string += c;
+            } else if (currentLevel.readingList) {
+                if (currentLevel.readingString) {
+                    currentLevel.string += c;
                 } else {
-                    if (currentFrame.readingSymbol) {
+                    if (currentLevel.readingSymbol) {
                         if (c == ' ') {
-                            currentFrame.readingSymbol = false;
-                            currentFrame.list.add(currentFrame.symbol.trim());
-                            currentFrame.symbol = "";
+                            currentLevel.readingSymbol = false;
+                            currentLevel.list.add(currentLevel.symbol.trim());
+                            currentLevel.symbol = "";
                         } else {
-                            currentFrame.symbol += c;
+                            currentLevel.symbol += c;
                         }
                     } else {
-                        if (currentFrame.readingNumber) {
+                        if (currentLevel.readingNumber) {
                             if (c == ' ') {
-                                currentFrame.readingNumber = false;
-                                currentFrame.list.add(Double.parseDouble(currentFrame.number));
-                                currentFrame.number = "";
+                                currentLevel.readingNumber = false;
+                                currentLevel.list.add(Double.parseDouble(currentLevel.number));
+                                currentLevel.number = "";
                             } else {
-                                currentFrame.number += c;
+                                currentLevel.number += c;
                             }
                         } else {
                             if (isDigit(c)) {
-                                currentFrame.readingNumber = true;
-                                currentFrame.number += c;
+                                currentLevel.readingNumber = true;
+                                currentLevel.number += c;
                             } else if (c != ' ') {
-                                currentFrame.readingSymbol = true;
-                                currentFrame.symbol += c;
+                                currentLevel.readingSymbol = true;
+                                currentLevel.symbol += c;
                             }
                         }
                     }
                 }
             } else {
-                currentFrame.symbol += c;
+                currentLevel.symbol += c;
                 if (index + 1 == code.length())
-                    System.out.print(globalMemory.get(currentFrame.symbol));
+                    System.out.print(globalMemory.get(currentLevel.symbol));
             }
         }
     }
 
-    private Object execute(List<Object> list, Map<Object, Object> memory) {
+    private Object execute(List<Object> callerList, List<Object> list, Map<Object, Object> memory) {
         if (list.isEmpty()) return null;
 
+        if (memory.containsKey(list.get(0))) {
+            Object element = list.get(0);
+            list.remove(0);
+            list.add(0, memory.get(element));
+        }
         if (list.get(0).equals("define")) {
             memory.put(list.get(1), list.get(2));
             return null;
@@ -115,34 +119,61 @@ public class Interpreter {
             if (memory.containsKey(element)) {
                 element = memory.get(element);
             } else if (element instanceof List) {
-                element = execute((List<Object>) element, memory);
+                element = execute(list, (List<Object>) element, memory);
             }
             System.out.print(element);
             return element;
         } else if (list.get(0).equals("+")) {
-            double addend = (double) memory.get(list.get(1));
-            double augend = (double) memory.get(list.get(2));
+            double addend;
+            double augend;
+            if (memory.containsKey(list.get(1)))
+                addend = (double) memory.get(list.get(1));
+            else
+                addend = (double) list.get(1);
+            if (memory.containsKey(list.get(2)))
+                augend = (double) memory.get(list.get(2));
+            else
+                augend = (double) list.get(2);
             return addend + augend;
         } else if (list.get(0).equals("lambda")) {
-            List<Object> body = (List<Object>) list.get(2);
-            List<Object> substitutedBody = new ArrayList<>();
-            for (Object element : body) {
-                if (memory.containsKey(element))
-                    substitutedBody.add(memory.get(element));
-                else
-                    substitutedBody.add(element);
+            Map<Object, Object> localMemory = new HashMap<>(memory);
+            List<Object> argumentList = (List<Object>) list.get(1);
+            for (int i = 0; i < argumentList.size(); i++) {
+                localMemory.put(argumentList.get(i), callerList.get(i + 1));
             }
-            return execute(substitutedBody, memory);
+            Object body = list.get(2);
+            if (body instanceof List) {
+                return substitute((List<Object>) body, localMemory);
+            } else {
+                if (localMemory.containsKey(body))
+                    return localMemory.get(body);
+                else
+                    return body;
+            }
         } else if (list.get(0) instanceof List) {
             List<Object> function = (List<Object>) list.get(0);
-            Map<Object, Object> localMemory = new HashMap<>(memory);
-            List<Object> argumentList = (List<Object>) function.get(1);
-            for (int i = 0; i < argumentList.size(); i++) {
-                localMemory.put(argumentList.get(i), list.get(i + 1));
-            }
-            return execute(function, localMemory);
+            Object result = execute(list, function, memory);
+            if (result instanceof List)
+                return execute(callerList, (List<Object>) result, memory);
+            else
+                return result;
+
         } else {
             return null;
         }
+    }
+
+    private Object substitute(List<Object> body, Map<Object, Object> memory) {
+        List<Object> literalBody = new ArrayList<>();
+        for (Object element : body) {
+            if (element instanceof List) {
+                literalBody.add(substitute((List<Object>) element, memory));
+            } else if (memory.containsKey(element)) {
+                literalBody.add(memory.get(element));
+            } else {
+                literalBody.add(element);
+            }
+        }
+        return literalBody;
     }
 }

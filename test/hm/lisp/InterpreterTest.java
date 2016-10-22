@@ -23,7 +23,7 @@ public class InterpreterTest {
     @Test
     public void variable() throws Exception {
         interpreter.evaluate("(define a 10)\n" +
-                "a");
+                             "a");
         assertOutput("10.0");
     }
 
@@ -36,7 +36,7 @@ public class InterpreterTest {
     @Test
     public void printVariable() throws Exception {
         interpreter.evaluate("(define a \"hello world\")\n" +
-                "(print a)");
+                             "(print a)");
         assertOutput("hello world");
     }
 
@@ -50,6 +50,26 @@ public class InterpreterTest {
     public void printSum() throws Exception {
         interpreter.evaluate("((lambda (x y) (print (+ x y))) 10 11)");
         assertOutput("21.0");
+    }
+
+    @Test
+    public void printIdentity() throws Exception {
+        interpreter.evaluate("(print ((lambda (x) x) \"identity\"))");
+        assertOutput("identity");
+    }
+
+    @Test
+    public void printFunction() throws Exception {
+        interpreter.evaluate("(define add-5 (lambda (x) (+ x 5)))\n" +
+                             "(print (add-5 10))");
+        assertOutput("15.0");
+    }
+
+    @Test
+    public void printHighOrderFunction() throws Exception {
+        interpreter.evaluate("(define make-adder (lambda (x) (lambda (y) (+ x y))))\n" +
+                             "(print ((make-adder 5) 10))");
+        assertOutput("15.0");
     }
 
     private void assertOutput(String output) throws IOException {
