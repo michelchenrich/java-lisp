@@ -135,6 +135,47 @@ public class Interpreter {
             else
                 augend = (double) list.get(2);
             return addend + augend;
+        } else if (list.get(0).equals("if")) {
+            Object conditionArgument = list.get(1);
+            boolean condition;
+            if (conditionArgument instanceof List)
+                condition = (boolean) execute(callerList, (List<Object>) conditionArgument, memory);
+            else
+                condition = (boolean) conditionArgument;
+            if (condition) {
+                Object trueArgument = list.get(2);
+                if (trueArgument instanceof List)
+                    return execute(callerList, (List<Object>) trueArgument, memory);
+                else
+                    return trueArgument;
+            } else {
+                Object falseArgument = list.get(3);
+                if (falseArgument instanceof List)
+                    return execute(callerList, (List<Object>) falseArgument, memory);
+                else
+                    return falseArgument;
+            }
+        } else if (list.get(0).equals("=")) {
+            Object lhs = list.get(1);
+            if (memory.containsKey(lhs))
+                lhs = memory.get(lhs);
+            if (lhs instanceof List)
+                lhs = execute(callerList, (List<Object>) lhs, memory);
+            Object rhs = list.get(2);
+            if (memory.containsKey(rhs))
+                rhs = memory.get(rhs);
+            if (rhs instanceof List)
+                rhs = execute(callerList, (List<Object>) rhs, memory);
+            return lhs.equals(rhs);
+        } else if (list.get(0).equals("do")) {
+            for (int i = 1; i < list.size(); i++) {
+                execute(callerList, (List<Object>) list.get(i), memory);
+            }
+            return null;
+        } else if (list.get(0).equals("increment")) {
+            return ((double) list.get(1)) + 1;
+        } else if (list.get(0).equals("decrement")) {
+            return ((double) list.get(1)) - 1;
         } else if (list.get(0).equals("lambda")) {
             Map<Object, Object> localMemory = new HashMap<>(memory);
             List<Object> argumentList = (List<Object>) list.get(1);
