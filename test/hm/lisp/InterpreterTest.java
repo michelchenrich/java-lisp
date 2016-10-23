@@ -1,7 +1,6 @@
 package hm.lisp;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -99,24 +98,6 @@ public class InterpreterTest {
     }
 
     @Test
-    public void printCompleteList() throws Exception {
-        interpreter.evaluate("(define nil \"null\")\n" +
-                             "(define pair (lambda (x y) (lambda (z) (if (= z 0) x y))))\n" +
-                             "(define left (lambda (list) (list 0)))\n" +
-                             "(define right (lambda (list) (list 1)))\n" +
-                             "(define print-list (lambda (list)\n" +
-                             "  (if (= (left list) nil)\n" +
-                             "    (print \"end\")\n" +
-                             "    (do\n" +
-                             "      (print (left list))\n" +
-                             "      (print \", \")\n" +
-                             "      (print-list (right list))))))\n" +
-                             "(define list (pair 1 (pair 2 (pair 3 (pair 4 nil)))))\n" +
-                             "(print-list list)");
-        assertOutput("1.0, 2.0, 3.0, 4.0, end");
-    }
-
-    @Test
     public void printConditional() throws Exception {
         interpreter.evaluate("(define foo (lambda (x) (if (= x 0) (print \"true\") (print \"false\"))))\n" +
                              "(foo 0)\n" +
@@ -125,29 +106,24 @@ public class InterpreterTest {
         assertOutput("true, false");
     }
 
-    @Ignore
     @Test
-    public void printReverseList() throws Exception {
+    public void printCompleteList() throws Exception {
         interpreter.evaluate("(define nil \"null\")\n" +
                              "(define pair (lambda (x y) (lambda (z) (if (= z 0) x y))))\n" +
                              "(define left (lambda (list) (list 0)))\n" +
                              "(define right (lambda (list) (list 1)))\n" +
                              "(define print-list (lambda (list)\n" +
-                             "  (if (= (left list) nil)\n" +
-                             "    (print \"end\")\n" +
+                             "  (if (= (right list) nil)\n" +
+                             "    (print (left list))\n" +
                              "    (do\n" +
                              "      (print (left list))\n" +
                              "      (print \", \")\n" +
                              "      (print-list (right list))))))\n" +
-                             "(define make-reverse (lambda (n)\n" +
-                             "  (if (= n 0)\n" +
-                             "    nil\n" +
-                             "    (cons n (make-reverse (decrement n))))))\n" +
-                             "(print-list (make-reverse 3))");
-        assertOutput("3.0, 2.0, 1.0, end");
+                             "(define list (pair 1 (pair 2 (pair 3 (pair 4 nil)))))\n" +
+                             "(print-list list)");
+        assertOutput("1.0, 2.0, 3.0, 4.0");
     }
 
-    @Ignore
     @Test
     public void printNElementsFromList() throws Exception {
         interpreter.evaluate("(define nil \"null\")\n" +
@@ -155,8 +131,8 @@ public class InterpreterTest {
                              "(define left (lambda (list) (list 0)))\n" +
                              "(define right (lambda (list) (list 1)))\n" +
                              "(define print-list (lambda (list)\n" +
-                             "  (if (= (left list) nil)\n" +
-                             "    (print \"end\")\n" +
+                             "  (if (= (right list) nil)\n" +
+                             "    (print (left list))\n" +
                              "    (do\n" +
                              "      (print (left list))\n" +
                              "      (print \", \")\n" +
@@ -169,7 +145,60 @@ public class InterpreterTest {
                              "      (take (decrement n) (right list))))))\n" +
                              "(define list (pair 1 (pair 2 (pair 3 (pair 4 nil)))))\n" +
                              "(print-list (take 3 list))");
-        assertOutput("1.0, 2.0, 3.0, end");
+        assertOutput("1.0, 2.0, 3.0");
+    }
+
+    @Test
+    public void conflictingNames() throws Exception {
+        interpreter.evaluate("(define x 10)\n" +
+                             "(define delayed-adder (lambda (x)\n" +
+                             "  (+ ((lambda (x) x) 5) x)))\n" +
+                             "(print (delayed-adder x))");
+        assertOutput("15.0");
+    }
+
+    @Test
+    public void sameVariableNames() throws Exception {
+        interpreter.evaluate("(define identity (lambda (x) x))\n" +
+                             "(define apply (lambda (x y) (x y)))\n" +
+                             "(define delayed-adder (lambda (x)\n" +
+                             "  (+ (apply identity (apply identity (apply identity 5)))\n" +
+                             "     (apply (identity identity) (identity x)))))\n" +
+                             "(print (delayed-adder 10))");
+        assertOutput("15.0");
+    }
+
+    @Test
+    public void reverseListBug() throws Exception {
+        interpreter.evaluate("(define nil \"null\")\n" +
+                             "(define pair (lambda (x y) (lambda (z) (if (= z 0) x y))))\n" +
+                             "(define left (lambda (list) (list 0)))\n" +
+                             "(define right (lambda (list) (list 1)))\n" +
+                             "(define list (pair 3 (pair 2 (pair 1 nil))))" +
+                             "(print (left (right (right list))))");
+        assertOutput("1.0");
+    }
+
+    @Test
+    public void printReverseList() throws Exception {
+        interpreter.evaluate("(define nil \"null\")\n" +
+                             "(define pair (lambda (x y) (lambda (z) (if (= z 0) x y))))\n" +
+                             "(define left (lambda (list) (list 0)))\n" +
+                             "(define right (lambda (list) (list 1)))\n" +
+                             "(define print-list (lambda (list)\n" +
+                             "  (if (= (right list) nil)\n" +
+                             "    (print (left list))\n" +
+                             "    (do\n" +
+                             "      (print (left list))\n" +
+                             "      (print \", \")\n" +
+                             "      (print-list (right list))))))\n" +
+                             "(define countdown (lambda (n)\n" +
+                             "  (if (= n 0)\n" +
+                             "    nil\n" +
+                             "    (pair n (countdown (decrement n))))))\n" +
+                             "(define list (countdown 3))\n" +
+                             "(print-list list)");
+        assertOutput("3.0, 2.0, 1.0");
     }
 
     private void assertOutput(String output) throws IOException {
