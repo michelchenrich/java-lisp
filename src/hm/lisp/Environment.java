@@ -177,7 +177,14 @@ class Environment {
     }
 
     private Object print(List list) {
-        System.out.print(list.get(1));
+        Object argument = list.get(1);
+        if (argument instanceof List)
+            System.out.print(argument.toString()
+                                 .replaceAll("\\[", "(")
+                                 .replaceAll("\\]", ")")
+                                 .replaceAll(", ", " "));
+        else
+            System.out.print(argument);
         return list.get(1);
     }
 

@@ -1,5 +1,7 @@
 package hm.lisp;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Stack;
 
 import static java.lang.Character.isDigit;
@@ -7,13 +9,13 @@ import static java.lang.Character.isDigit;
 class Parser {
     private Environment environment;
     private Stack<Frame> frames = new Stack<>();
-    private Frame frame = new Frame();
 
     Parser(Environment environment) {
         this.environment = environment;
     }
 
     void parse(String code) {
+        Frame frame = new Frame();
         for (int index = 0; index < code.length(); index++) {
             char c = code.charAt(index);
             if (c == '\n') {
@@ -86,8 +88,12 @@ class Parser {
                 }
             } else {
                 frame.symbol += c;
-                if (index + 1 == code.length())
-                    System.out.print(environment.execute(frame.symbol));
+                if (index + 1 == code.length()) {
+                    List print = new ArrayList();
+                    print.add("print");
+                    print.add(environment.execute(frame.symbol));
+                    environment.execute(print);
+                }
             }
         }
     }
