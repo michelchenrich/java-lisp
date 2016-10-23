@@ -201,6 +201,56 @@ public class InterpreterTest {
         assertOutput("3.0, 2.0, 1.0");
     }
 
+    @Test
+    public void printLet() throws Exception {
+        interpreter.evaluate("(define greet (lambda (name sex)\n" +
+                             "  (let ((ms \"Miss\")\n" +
+                             "        (mr \"Mister\"))\n" +
+                             "    (do\n" +
+                             "      (print (if (= sex \"male\")\n" +
+                             "               mr\n" +
+                             "               ms))\n" +
+                             "      (print \" \")\n" +
+                             "      (print name)))))\n" +
+                             "(greet \"Bruna\" \"female\")");
+        assertOutput("Miss Bruna");
+    }
+
+    @Test
+    public void printUpdatingLet() throws Exception {
+        interpreter.evaluate("(print (let ((x 10)\n" +
+                             "             (x (increment x)))\n" +
+                             "         x))");
+        assertOutput("11.0");
+    }
+
+    @Test
+    public void printLetInLambda() throws Exception {
+        interpreter.evaluate("(define print-increment (lambda (x)\n" +
+                             "  (let ((x (increment x)))\n" +
+                             "    (do (print 10.0) (print \", \") (print x)))))\n" +
+                             "(print-increment 10.0)");
+        assertOutput("10.0, 11.0");
+    }
+
+    @Test
+    public void functionDefinitionShortcut() throws Exception {
+        interpreter.evaluate("(define (print-increment x)\n" +
+                             "  (let ((x (increment x)))\n" +
+                             "    (do (print 10.0) (print \", \") (print x))))\n" +
+                             "(print-increment 10.0)");
+        assertOutput("10.0, 11.0");
+    }
+    @Test
+    public void recurse() throws Exception {
+        interpreter.evaluate("(define (countdown n)\n" +
+                             "  (if (= n 0)\n" +
+                             "    (print \"Done\")\n" +
+                             "    (countdown (decrement n))))\n" +
+                             "(countdown 100000)");
+        assertOutput("100000.0");
+    }
+
     private void assertOutput(String output) throws IOException {
         outputStream.flush();
         assertEquals(output, new String(outputStream.toByteArray()));
