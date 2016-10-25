@@ -241,6 +241,7 @@ public class InterpreterTest {
                              "(print-increment 10.0)");
         assertOutput("10.0, 11.0");
     }
+
     @Test
     public void recurse() throws Exception {
         interpreter.evaluate("(define (factorial n)" +
@@ -249,6 +250,15 @@ public class InterpreterTest {
                              "    (* n (factorial (decrement n)))))" +
                              "(print (factorial 5))");
         assertOutput("120.0");
+    }
+
+    @Test
+    public void delayLambdaExpansion() throws Exception {
+        interpreter.evaluate("(define (partial f x) (lambda (y) (f x y)))\n" +
+                             "(define (power n x) (if (= n 1) x (* x (power (decrement n) x))))\n" +
+                             "(define square (partial power 2))\n" +
+                             "square");
+        assertOutput("(lambda (y) (power 2.0 y))");
     }
 
     private void assertOutput(String output) throws IOException {

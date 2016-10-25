@@ -15,9 +15,10 @@ class Environment {
     }
 
     private Object execute(Object element, Map memory) {
-        element = reduceElement(element, memory);
         if (isExpression(element))
             return executeExpression((List) element, memory);
+        else if (memory.containsKey(element))
+            return execute(memory.get(element), memory);
         else
             return element;
     }
@@ -42,8 +43,34 @@ class Environment {
             return condition(list, memory);
         else if (isSequential(list))
             return runInSequence(list, memory);
+        else if (isFunctionCall(list, memory))
+            return executeFunction(list, memory);
+        else if (isPrimitive(list))
+            return executePrimitive(reduceArguments(list, memory));
         else
-            return function(list, memory);
+            return execute(reduceOperator(list, memory), memory);
+    }
+
+    private List reduceOperator(List list, Map memory) {
+        List reduced = new ArrayList();
+        reduced.add(0, execute(list.get(0), memory));
+        for (int i = 1; i < list.size(); i++)
+            reduced.add(list.get(i));
+        return reduced;
+    }
+
+    private Object executeFunction(List list, Map memory) {
+        List lambda = (List) memory.get(list.remove(0));
+        list.add(0, lambda);
+        return execute(reduceLambda(list), memory);
+    }
+
+    private boolean isFunctionCall(List list, Map memory) {
+        Object operator = list.get(0);
+        return !isExpression(operator) &&
+               memory.containsKey(operator) &&
+               isExpression(memory.get(operator)) &&
+               isLambda((List) memory.get(operator));
     }
 
     private Object scopedExpression(List list, Map memory) {
@@ -64,28 +91,15 @@ class Environment {
                isExpression(list.get(1));
     }
 
-    private Object function(List list, Map memory) {
-        reduceArguments(list, memory);
-        if (isPrimitive(list)) {
-            return executePrimitive(list);
-        } else {
-            return execute(reduceLambda(list), memory);
-        }
-    }
-
-    private void reduceArguments(List list, Map memory) {
-        for (int i = list.size() - 1; i > -1; i--) {
+    private List reduceArguments(List list, Map memory) {
+        List reverse = new ArrayList();
+        reverse.add(list.get(0));
+        for (int i = 1; i < list.size(); i++) {
             Object argument = list.get(i);
-            list.remove(i);
-            list.add(i, execute(argument, memory));
+            argument = execute(argument, memory);
+            reverse.add(argument);
         }
-    }
-
-    private Object reduceElement(Object element, Map memory) {
-        if (!isExpression(element) && memory.containsKey(element))
-            return memory.get(element);
-        else
-            return element;
+        return reverse;
     }
 
     private boolean isExpression(Object element) {
@@ -117,21 +131,25 @@ class Environment {
         }
     }
 
-    private Object reduceLambda(List list) {
-        Object operator = list.get(0);
+    private Object reduceLambda(List lambdaCall) {
+        Object operator = lambdaCall.get(0);
+        List lambda = (List) operator;
+        List arguments = (List) lambda.get(1);
+
         if (!isExpression(operator))
             throw new RuntimeException(format("Undefined operator %s", operator));
-        List lambda = (List) operator;
-        Map valueMap = mapValues(list, lambda);
+
+        if (lambdaCall.size() != (arguments.size() + 1))
+            throw new RuntimeException(format("Expected %d arguments, got %d", arguments.size(), lambdaCall.size() - 1));
+
+        Map valueMap = mapValues(lambdaCall, arguments);
         return reduceLambdaBody(lambda.get(2), valueMap);
     }
 
-    private Map mapValues(List list, List lambda) {
-        List arguments = (List) lambda.get(1);
+    private Map mapValues(List lambdaCall, List arguments) {
         Map<Object, Object> values = new HashMap<>();
-        for (int i = 0; i < arguments.size(); i++) {
-            values.put(arguments.get(i), list.get(i + 1));
-        }
+        for (int i = 0; i < arguments.size(); i++)
+            values.put(arguments.get(i), lambdaCall.get(i + 1));
         return values;
     }
 
