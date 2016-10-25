@@ -243,12 +243,12 @@ public class InterpreterTest {
     }
     @Test
     public void recurse() throws Exception {
-        interpreter.evaluate("(define (countdown n)\n" +
-                             "  (if (= n 0)\n" +
-                             "    (print \"Done\")\n" +
-                             "    (countdown (decrement n))))\n" +
-                             "(countdown 100000)");
-        assertOutput("100000.0");
+        interpreter.evaluate("(define (factorial n)" +
+                             "  (if (= n 0)" +
+                             "    1" +
+                             "    (* n (factorial (decrement n)))))" +
+                             "(print (factorial 5))");
+        assertOutput("120.0");
     }
 
     private void assertOutput(String output) throws IOException {

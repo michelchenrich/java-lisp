@@ -13,26 +13,13 @@ class Environment {
     Object execute(Object element) {
         return execute(element, globals);
     }
-//
-//    private Object executeIterative(Object element, Map memory) {
-//        element = reduceElement(element, memory);
-//        if (isExpression(element)) {
-//            Object previous;
-//            do {
-//                previous = element;
-//                element = executeExpression((List) element, memory);
-//                element = reduceElement(element, memory);
-//            } while (isExpression(element) && !element.equals(previous));
-//        }
-//        return element;
-//    }
 
     private Object execute(Object element, Map memory) {
         element = reduceElement(element, memory);
-        if (!isExpression(element))
-            return element;
-        else
+        if (isExpression(element))
             return executeExpression((List) element, memory);
+        else
+            return element;
     }
 
     private void debug(Object element) {
@@ -242,6 +229,8 @@ class Environment {
                 return decrement(list);
             case "+":
                 return plus(list);
+            case "*":
+                return multiply(list);
             case "=":
                 return equal(list);
             default:
@@ -263,6 +252,10 @@ class Environment {
         return ((boolean) execute(list.get(1), memory) ?
             execute(list.get(2), memory) :
             execute(list.get(3), memory));
+    }
+
+    private Object multiply(List list) {
+        return (double) list.get(1) * (double) list.get(2);
     }
 
     private Object plus(List list) {
@@ -305,7 +298,7 @@ class Environment {
 
             memory.put(functionDefinition.get(0), lambda);
         } else {
-            memory.put(identifier, definition);
+            memory.put(identifier, execute(definition));
         }
         return null;
     }
@@ -316,6 +309,7 @@ class Environment {
                operator.equals("increment") ||
                operator.equals("decrement") ||
                operator.equals("+") ||
+               operator.equals("*") ||
                operator.equals("=");
     }
 }
