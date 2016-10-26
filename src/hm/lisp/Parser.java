@@ -76,7 +76,8 @@ class Parser {
                                 frame.number += c;
                             }
                         } else {
-                            if (isDigit(c)) {
+                            char next = code.charAt(index + 1);
+                            if (isDigit(c) || (c == '-' && isDigit(next))) {
                                 frame.readingNumber = true;
                                 frame.number += c;
                             } else if (c != ' ') {

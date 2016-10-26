@@ -1,7 +1,6 @@
 package hm.lisp;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -262,18 +261,16 @@ public class InterpreterTest {
         assertOutput("(lambda (y) (power 2.0 y))");
     }
 
-    @Ignore
     @Test
     public void primitiveAutoCurry() throws Exception {
         interpreter.evaluate("(print ((+ 5) 10))");
         assertOutput("15.0");
     }
 
-    @Ignore
     @Test
     public void primitiveAutoCurryDescription() throws Exception {
         interpreter.evaluate("(print (+ 5))");
-        assertOutput("(lambda (a) (+ 5 a)");
+        assertOutput("(lambda (y) (+ 5 y))");
     }
 
     @Test
@@ -283,12 +280,11 @@ public class InterpreterTest {
         assertOutput("25.0");
     }
 
-    @Ignore
     @Test
     public void autoCurryDescription() throws Exception {
         interpreter.evaluate("(define (power n x) (if (= n 1) x (* x (power (decrement n) x))))\n" +
                              "(print (power 2))");
-        assertOutput("(lambda (a) (power 2.0 a))");
+        assertOutput("(lambda (x) (power 2.0 x))");
     }
 
     @Test

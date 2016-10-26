@@ -81,7 +81,7 @@ class Environment {
         List<List> definitions = (List) list.get(1);
         Map localMemory = new HashMap(memory);
         for (List definition : definitions)
-            localMemory.put(definition.get(0), execute(definition.get(1), localMemory));
+            registerInMemory(localMemory, definition.get(0), execute(definition.get(1), localMemory));
         return localMemory;
     }
 
@@ -246,22 +246,56 @@ class Environment {
     }
 
     private Object executePrimitive(List list) {
-        switch ((String) list.get(0)) {
+        String operator = (String) list.get(0);
+        switch (operator.substring("<primitive>".length())) {
             case "print":
                 return print(list);
-            case "increment":
-                return increment(list);
-            case "decrement":
-                return decrement(list);
             case "+":
                 return plus(list);
+            case "-":
+                return minus(list);
+            case "/":
+                return divide(list);
             case "*":
                 return multiply(list);
             case "=":
                 return equal(list);
+            case "not":
+                return not(list);
+            case "and":
+                return and(list);
+            case "or":
+                return or(list);
+            case ">":
+                return greaterThan(list);
             default:
                 return null;
         }
+    }
+
+    private Object greaterThan(List list) {
+        return (double) list.get(1) > (double) list.get(2);
+    }
+
+    private Object not(List list) {
+        return !((boolean) list.get(1));
+    }
+
+    private Object and(List list) {
+        return (boolean) list.get(1) && (boolean) list.get(2);
+    }
+
+
+    private Object or(List list) {
+        return (boolean) list.get(1) || (boolean) list.get(2);
+    }
+
+    private Object divide(List list) {
+        return (double) list.get(1) / (double) list.get(2);
+    }
+
+    private Object minus(List list) {
+        return (double) list.get(1) - (double) list.get(2);
     }
 
     private Object equal(List list) {
@@ -322,20 +356,23 @@ class Environment {
             lambda.add(arguments);
             lambda.add(definition);
 
-            memory.put(functionDefinition.get(0), lambda);
+            Object key = functionDefinition.get(0);
+            registerInMemory(memory, key, lambda);
         } else {
-            memory.put(identifier, execute(definition));
+            Object value = execute(definition);
+            registerInMemory(memory, identifier, value);
         }
         return null;
     }
 
+    private Object registerInMemory(Map memory, Object identifier, Object value) {
+        if (identifier.toString().contains("<primitive>"))
+            throw new RuntimeException("Cannot define new primitives");
+        return memory.put(identifier, value);
+    }
+
     private boolean isPrimitive(List list) {
         Object operator = list.get(0);
-        return operator.equals("print") ||
-               operator.equals("increment") ||
-               operator.equals("decrement") ||
-               operator.equals("+") ||
-               operator.equals("*") ||
-               operator.equals("=");
+        return operator.toString().startsWith("<primitive>");
     }
 }
