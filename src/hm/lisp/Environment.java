@@ -123,12 +123,8 @@ class Environment {
     }
 
     private boolean isLambdaCall(List list) {
-        try {
-            Object operator = list.get(0);
-            return isExpression(operator) && ((List) list.get(0)).get(0).equals("lambda");
-        } catch (Exception ignored) {
-            return false;
-        }
+        Object operator = list.get(0);
+        return isExpression(operator) && ((List) list.get(0)).get(0).equals("lambda");
     }
 
     private Object reduceLambda(List lambdaCall) {
@@ -139,17 +135,29 @@ class Environment {
         if (!isExpression(operator))
             throw new RuntimeException(format("Undefined operator %s", operator));
 
-        if (lambdaCall.size() != (arguments.size() + 1))
-            throw new RuntimeException(format("Expected %d arguments, got %d", arguments.size(), lambdaCall.size() - 1));
-
         Map valueMap = mapValues(lambdaCall, arguments);
-        return reduceLambdaBody(lambda.get(2), valueMap);
+        Object reducedLambdaBody = reduceLambdaBody(lambda.get(2), valueMap);
+        if (lambdaCall.size() == (arguments.size() + 1))
+            return reducedLambdaBody;
+        else
+            return curry(lambdaCall, arguments, reducedLambdaBody);
+    }
+
+    private Object curry(List lambdaCall, List arguments, Object reducedLambdaBody) {
+        List curry = new ArrayList();
+        curry.add("lambda");
+        List curryArguments = new ArrayList<>();
+        curry.add(curryArguments);
+        for (int i = lambdaCall.size() - 1; i < arguments.size(); i++)
+            curryArguments.add(arguments.get(i));
+        curry.add(reducedLambdaBody);
+        return curry;
     }
 
     private Map mapValues(List lambdaCall, List arguments) {
         Map<Object, Object> values = new HashMap<>();
-        for (int i = 0; i < arguments.size(); i++)
-            values.put(arguments.get(i), lambdaCall.get(i + 1));
+        for (int i = 1; i < lambdaCall.size(); i++)
+            values.put(arguments.get(i - 1), lambdaCall.get(i));
         return values;
     }
 

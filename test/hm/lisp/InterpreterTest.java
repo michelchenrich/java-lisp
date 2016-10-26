@@ -1,6 +1,7 @@
 package hm.lisp;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -259,6 +260,61 @@ public class InterpreterTest {
                              "(define square (partial power 2))\n" +
                              "square");
         assertOutput("(lambda (y) (power 2.0 y))");
+    }
+
+    @Ignore
+    @Test
+    public void primitiveAutoCurry() throws Exception {
+        interpreter.evaluate("(print ((+ 5) 10))");
+        assertOutput("15.0");
+    }
+
+    @Ignore
+    @Test
+    public void primitiveAutoCurryDescription() throws Exception {
+        interpreter.evaluate("(print (+ 5))");
+        assertOutput("(lambda (a) (+ 5 a)");
+    }
+
+    @Test
+    public void autoCurry() throws Exception {
+        interpreter.evaluate("(define (power n x) (if (= n 1) x (* x (power (decrement n) x))))\n" +
+                             "(print ((power 2) 5))");
+        assertOutput("25.0");
+    }
+
+    @Ignore
+    @Test
+    public void autoCurryDescription() throws Exception {
+        interpreter.evaluate("(define (power n x) (if (= n 1) x (* x (power (decrement n) x))))\n" +
+                             "(print (power 2))");
+        assertOutput("(lambda (a) (power 2.0 a))");
+    }
+
+    @Test
+    public void lambdaAutoCurry() throws Exception {
+        interpreter.evaluate("(print (((lambda (x y) (* x y)) 5) 10))");
+        assertOutput("50.0");
+    }
+
+    @Test
+    public void lambdaAutoCurryDescription() throws Exception {
+        interpreter.evaluate("(print ((lambda (n x) (if (= n 1) x (* x (power (decrement n) x)))) 2))");
+        assertOutput("(lambda (x) (if (= 2.0 1.0) x (* x (power (decrement 2.0) x))))");
+    }
+
+    @Test
+    public void internalFunctions() throws Exception {
+        interpreter.evaluate("(define (countup x)" +
+                             "  (let ((iteration (lambda (y x)" +
+                             "                     (if (= y x) " +
+                             "                       (print y)" +
+                             "                       (do (print y)" +
+                             "                           (print \", \")" +
+                             "                           (iteration (increment y) x))))))" +
+                             "    (iteration 1 x)))" +
+                             "(countup 10)");
+        assertOutput("1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0");
     }
 
     private void assertOutput(String output) throws IOException {
