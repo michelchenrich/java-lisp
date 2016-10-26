@@ -20,9 +20,9 @@ public class Interpreter {
         evaluate("(define (= x y) (<primitive>= x y))");
         evaluate("(define (not x) (<primitive>not x))");
         evaluate("(define (> x y) (<primitive>> x y))");
-        evaluate("(define (>= x y) (or (> x y) (= x y)))");
-        evaluate("(define (< x y) (not (>= x y)))");
-        evaluate("(define (>= x y) (or (< x y) (= x y)))");
+        evaluate("(define (< x y) (<primitive>< x y))");
+        evaluate("(define (>= x y) (<primitive>>= x y))");
+        evaluate("(define (<= x y) (<primitive><= x y))");
         evaluate("(define (or x y) (<primitive>or x y))");
         evaluate("(define (and x y) (<primitive>and x y))");
         evaluate("(define (print x) (<primitive>print x))");

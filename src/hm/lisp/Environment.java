@@ -23,16 +23,17 @@ class Environment {
             return element;
     }
 
-    private void debug(Object element) {
+    private Object debug(Object element) {
         System.err.println(element.toString()
                                .replaceAll("\\[", "(")
                                .replaceAll("\\]", ")")
                                .replaceAll(", ", " "));
+        return element;
     }
 
     private Object executeExpression(List list, Map memory) {
         if (isLambdaCall(list))
-            return execute(reduceLambda(list), memory);
+            return execute(reduceLambda(list, memory), memory);
         else if (isLambda(list))
             return list;
         else if (isDefinition(list))
@@ -62,7 +63,7 @@ class Environment {
     private Object executeFunction(List list, Map memory) {
         List lambda = (List) memory.get(list.remove(0));
         list.add(0, lambda);
-        return execute(reduceLambda(list), memory);
+        return execute(reduceLambda(list, memory), memory);
     }
 
     private boolean isFunctionCall(List list, Map memory) {
@@ -127,7 +128,7 @@ class Environment {
         return isExpression(operator) && ((List) list.get(0)).get(0).equals("lambda");
     }
 
-    private Object reduceLambda(List lambdaCall) {
+    private Object reduceLambda(List lambdaCall, Map memory) {
         Object operator = lambdaCall.get(0);
         List lambda = (List) operator;
         List arguments = (List) lambda.get(1);
@@ -135,7 +136,7 @@ class Environment {
         if (!isExpression(operator))
             throw new RuntimeException(format("Undefined operator %s", operator));
 
-        Map valueMap = mapValues(lambdaCall, arguments);
+        Map valueMap = mapValues(lambdaCall, arguments, memory);
         Object reducedLambdaBody = reduceLambdaBody(lambda.get(2), valueMap);
         if (lambdaCall.size() == (arguments.size() + 1))
             return reducedLambdaBody;
@@ -154,10 +155,14 @@ class Environment {
         return curry;
     }
 
-    private Map mapValues(List lambdaCall, List arguments) {
+    private Map mapValues(List lambdaCall, List arguments, Map memory) {
         Map<Object, Object> values = new HashMap<>();
-        for (int i = 1; i < lambdaCall.size(); i++)
-            values.put(arguments.get(i - 1), lambdaCall.get(i));
+        for (int i = 1; i < lambdaCall.size(); i++){
+            Object value = lambdaCall.get(i);
+            if(!isExpression(value) && memory.containsKey(value))
+                value = memory.get(value);
+            values.put(arguments.get(i - 1), value);
+        }
         return values;
     }
 
@@ -247,7 +252,8 @@ class Environment {
 
     private Object executePrimitive(List list) {
         String operator = (String) list.get(0);
-        switch (operator.substring("<primitive>".length())) {
+        String name = operator.substring("<primitive>".length());
+        switch (name) {
             case "print":
                 return print(list);
             case "+":
@@ -268,9 +274,27 @@ class Environment {
                 return or(list);
             case ">":
                 return greaterThan(list);
+            case ">=":
+                return greaterOrEqualThan(list);
+            case "<":
+                return lessThan(list);
+            case "<=":
+                return lessThanOrEqualTo(list);
             default:
-                return null;
+                throw new RuntimeException(format("Primitive operator %s does not exist", name));
         }
+    }
+
+    private Object greaterOrEqualThan(List list) {
+        return (double) list.get(1) >= (double) list.get(2);
+    }
+
+    private Object lessThanOrEqualTo(List list) {
+        return (double) list.get(1) <= (double) list.get(2);
+    }
+
+    private Object lessThan(List list) {
+        return (double) list.get(1) < (double) list.get(2);
     }
 
     private Object greaterThan(List list) {
@@ -320,14 +344,6 @@ class Environment {
 
     private Object plus(List list) {
         return (double) list.get(1) + (double) list.get(2);
-    }
-
-    private Object decrement(List list) {
-        return ((double) list.get(1)) - 1;
-    }
-
-    private Object increment(List list) {
-        return ((double) list.get(1)) + 1;
     }
 
     private Object print(List list) {
